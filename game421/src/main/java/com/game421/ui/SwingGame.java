@@ -539,10 +539,12 @@ public final class SwingGame {
         heading.add(subtitle);
         root.add(heading, BorderLayout.NORTH);
 
-        JPanel handsPanel = new JPanel(new GridLayout(2, 1, 0, 12));
+        JPanel handsPanel = new JPanel();
         handsPanel.setOpaque(false);
+        handsPanel.setLayout(new BoxLayout(handsPanel, BoxLayout.Y_AXIS));
         for (Map.Entry<Player, Hand> entry : hands.entrySet()) {
             handsPanel.add(resultCard(entry.getKey(), entry.getValue(), entry.getKey() == winner));
+            handsPanel.add(Box.createVerticalStrut(12));
         }
         root.add(handsPanel, BorderLayout.CENTER);
 
@@ -556,7 +558,7 @@ public final class SwingGame {
         root.add(actions, BorderLayout.SOUTH);
 
         dialog.setContentPane(root);
-        dialog.setSize(620, 410);
+        dialog.setSize(660, 470);
         dialog.setResizable(false);
         dialog.setLocationRelativeTo(frame);
         dialog.setVisible(true);
@@ -568,6 +570,8 @@ public final class SwingGame {
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(winner ? GOLD : PARCHMENT_SHADE, 3),
                 BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        card.setMaximumSize(new Dimension(Integer.MAX_VALUE, 112));
+        card.setPreferredSize(new Dimension(600, 112));
         card.add(label(player.getName() + (winner ? "  -  POINT WINNER" : ""), 15, winner ? ACCENT_DARK : INK), BorderLayout.NORTH);
         JPanel diceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         diceRow.setOpaque(false);
@@ -647,10 +651,10 @@ public final class SwingGame {
                 humanTurn = false;
                 setControlsEnabled(false);
                 refreshScores();
-                turnLabel.setText(winner.getName() + " wins the point!");
-                hintLabel.setText("Reviewing the hands on the table...");
-                handLabel.setText("Point awarded");
-                rollsLabel.setText("POINT AWARDED");
+                turnLabel.setText("The inn grows quiet...");
+                hintLabel.setText("The hands are being revealed at the table.");
+                handLabel.setText("Round " + number + " complete");
+                rollsLabel.setText("");
                 append(winner.getName() + " wins round " + number + " and scores a point.");
                 showRoundResultDialog(hands, winner);
             });

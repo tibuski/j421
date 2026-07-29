@@ -33,10 +33,14 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.GridLayout;
 import java.awt.Insets;
+import java.awt.RenderingHints;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.LinkedHashMap;
@@ -49,14 +53,20 @@ import java.util.concurrent.CountDownLatch;
 /** Swing presentation for the game. Swing is part of the JDK and works on Windows and GNOME. */
 public final class SwingGame {
 
-    private static final Color BACKGROUND = new Color(13, 24, 38);
-    private static final Color SURFACE = new Color(24, 39, 57);
-    private static final Color SURFACE_LIGHT = new Color(35, 55, 77);
-    private static final Color TEXT = new Color(234, 241, 247);
-    private static final Color MUTED = new Color(154, 174, 191);
-    private static final Color ACCENT = new Color(61, 211, 177);
-    private static final Color ACCENT_DARK = new Color(27, 122, 108);
-    private static final Color GOLD = new Color(245, 191, 66);
+    private static final Color BACKGROUND = new Color(29, 15, 9);
+    private static final Color WOOD_DARK = new Color(51, 25, 13);
+    private static final Color WOOD = new Color(94, 48, 24);
+    private static final Color WOOD_LIGHT = new Color(132, 76, 38);
+    private static final Color PARCHMENT = new Color(235, 213, 164);
+    private static final Color PARCHMENT_SHADE = new Color(195, 162, 104);
+    private static final Color INK = new Color(48, 29, 17);
+    private static final Color TEXT = new Color(255, 239, 197);
+    private static final Color MUTED = new Color(209, 178, 125);
+    private static final Color ACCENT = new Color(218, 170, 67);
+    private static final Color ACCENT_DARK = new Color(105, 40, 22);
+    private static final Color GOLD = new Color(226, 183, 75);
+    private static final Font DISPLAY_FONT = new Font(Font.SERIF, Font.BOLD, 18);
+    private static final Font BODY_FONT = new Font(Font.SERIF, Font.PLAIN, 14);
 
     private final JFrame frame = new JFrame("421 · Dice Table");
     private final JLabel roundLabel = label("ROUND 1", 12, ACCENT);
@@ -117,8 +127,7 @@ public final class SwingGame {
         frame.setSize(1040, 700);
         frame.setLocationByPlatform(true);
 
-        JPanel root = new JPanel(new BorderLayout(24, 20));
-        root.setBackground(BACKGROUND);
+        JPanel root = new WoodPanel(new BorderLayout(24, 20), WOOD_DARK, BACKGROUND);
         root.setBorder(BorderFactory.createEmptyBorder(24, 28, 24, 28));
         root.add(header(), BorderLayout.NORTH);
         root.add(table(), BorderLayout.CENTER);
@@ -137,8 +146,8 @@ public final class SwingGame {
     private JPanel header() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
-        JLabel title = label("421", 42, TEXT);
-        JLabel subtitle = label("THE CLASSIC DICE TABLE", 11, ACCENT);
+        JLabel title = label("421", 46, TEXT);
+        JLabel subtitle = label("THE GILDED DRAGON INN", 12, ACCENT);
         JPanel titles = new JPanel();
         titles.setOpaque(false);
         titles.setLayout(new BoxLayout(titles, BoxLayout.Y_AXIS));
@@ -151,10 +160,11 @@ public final class SwingGame {
     }
 
     private JPanel table() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(SURFACE);
+        JPanel panel = new WoodPanel(new GridBagLayout(), WOOD, WOOD_DARK);
         panel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(49, 72, 94)),
+                BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(GOLD, 2),
+                        BorderFactory.createLineBorder(WOOD_DARK, 4)),
                 BorderFactory.createEmptyBorder(28, 28, 28, 28)));
 
         GridBagConstraints constraints = new GridBagConstraints();
@@ -173,9 +183,12 @@ public final class SwingGame {
         dice.setOpaque(false);
         for (int i = 0; i < diceButtons.length; i++) {
             int position = i;
-            diceButtons[i] = button("-", SURFACE_LIGHT, TEXT);
+            diceButtons[i] = button("-", PARCHMENT, INK);
             diceButtons[i].setPreferredSize(new Dimension(125, 125));
-            diceButtons[i].setFont(new Font(Font.SANS_SERIF, Font.BOLD, 52));
+            diceButtons[i].setFont(new Font(Font.SERIF, Font.BOLD, 56));
+            diceButtons[i].setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(91, 53, 24), 3),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)));
             diceButtons[i].addActionListener(event -> toggleDie(position));
             dice.add(diceButtons[i]);
         }
@@ -220,18 +233,19 @@ public final class SwingGame {
 
         JPanel scoreBox = new JPanel(new BorderLayout(0, 10));
         scoreBox.setOpaque(false);
-        scoreBox.add(label("SCOREBOARD", 12, ACCENT), BorderLayout.NORTH);
+        scoreBox.add(label("INN SCOREBOOK", 12, ACCENT), BorderLayout.NORTH);
         scoreBox.add(scorePanel, BorderLayout.CENTER);
 
         activity.setEditable(false);
         activity.setLineWrap(true);
         activity.setWrapStyleWord(true);
-        activity.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, 12));
-        activity.setForeground(MUTED);
-        activity.setBackground(SURFACE);
+        activity.setFont(BODY_FONT.deriveFont(13f));
+        activity.setForeground(INK);
+        activity.setBackground(PARCHMENT);
         activity.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
         JScrollPane log = new JScrollPane(activity);
-        log.setBorder(BorderFactory.createLineBorder(new Color(49, 72, 94)));
+        log.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(GOLD, 2), BorderFactory.createLineBorder(WOOD_DARK, 3)));
         log.setPreferredSize(new Dimension(260, 260));
 
         panel.add(scoreBox, BorderLayout.NORTH);
@@ -326,8 +340,8 @@ public final class SwingGame {
 
     private void updateDieButton(int position) {
         diceButtons[position].setText(plainDieValue(diceButtons[position].getText()));
-        diceButtons[position].setBackground(selected[position] ? ACCENT : SURFACE_LIGHT);
-        diceButtons[position].setForeground(selected[position] ? BACKGROUND : TEXT);
+        diceButtons[position].setBackground(selected[position] ? GOLD : PARCHMENT);
+        diceButtons[position].setForeground(INK);
         selectionLabel.setText("KEEP: " + (heldPositions().isEmpty() ? "none" : heldPositions()));
     }
 
@@ -375,10 +389,11 @@ public final class SwingGame {
 
     private JPanel scoreCard(Player player) {
         JPanel card = new JPanel(new BorderLayout(0, 3));
-        card.setBackground(SURFACE_LIGHT);
-        card.setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
-        JLabel name = label(player.getName(), 12, TEXT);
-        JLabel score = label(player.getScore() + " / " + winningScore, 23, player == human ? ACCENT : GOLD);
+        card.setBackground(PARCHMENT);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(PARCHMENT_SHADE, 2), BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+        JLabel name = label(player.getName(), 12, INK);
+        JLabel score = label(player.getScore() + " / " + winningScore, 23, player == human ? ACCENT_DARK : WOOD);
         card.add(name, BorderLayout.NORTH);
         card.add(score, BorderLayout.CENTER);
         return card;
@@ -391,19 +406,47 @@ public final class SwingGame {
 
     private static JLabel label(String text, int size, Color color) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font(Font.SANS_SERIF, Font.BOLD, size));
+        label.setFont(DISPLAY_FONT.deriveFont((float) size));
         label.setForeground(color);
         return label;
     }
 
     private static JButton button(String text, Color background, Color foreground) {
         JButton button = new JButton(text);
-        button.setFont(new Font(Font.SANS_SERIF, Font.BOLD, 12));
+        button.setFont(DISPLAY_FONT.deriveFont(13f));
         button.setBackground(background);
         button.setForeground(foreground);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(11, 16, 11, 16));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(48, 24, 12), 2),
+                BorderFactory.createEmptyBorder(10, 16, 10, 16)));
         return button;
+    }
+
+    private static final class WoodPanel extends JPanel {
+        private final Color top;
+        private final Color bottom;
+
+        private WoodPanel(java.awt.LayoutManager layout, Color top, Color bottom) {
+            super(layout);
+            this.top = top;
+            this.bottom = bottom;
+            setOpaque(false);
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setPaint(new GradientPaint(0, 0, top, 0, getHeight(), bottom));
+            g.fillRect(0, 0, getWidth(), getHeight());
+            g.setColor(new Color(255, 211, 139, 20));
+            for (int y = 14; y < getHeight(); y += 24) {
+                g.fillRect(0, y, getWidth(), 2);
+            }
+            g.dispose();
+            super.paintComponent(graphics);
+        }
     }
 
     private final class Listener implements GameListener {

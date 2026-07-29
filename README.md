@@ -1,6 +1,11 @@
 # game421
 
-Console implementation of the classic French dice game 421.
+Console implementation of the classic French dice game 421, with a graphical
+table dressed as a corner of the Yawning Portal inn in Waterdeep (Forgotten
+Realms): a candle-lit taproom, a green felt gaming table, animated bone dice
+that tumble and settle when cast, a score ledger with wax seals and gold
+coins, and a bard narrating the match. Your opponent is drawn from the
+setting — Volo, Durnan, Mirt, or Laeral Silverhand.
 
 ## Prerequisites
 
@@ -49,8 +54,10 @@ and run:
 run-game.cmd
 ```
 
-The JAR opens the graphical game table. The interface uses Java Swing, which is
-included with Java and works on Windows and Linux desktops such as GNOME.
+The JAR opens the graphical game table: name your adventurer, take a seat at
+the Yawning Portal, and click the dice to keep them between casts. The
+interface uses Java Swing, which is included with Java and works on Windows
+and Linux desktops such as GNOME.
 
 The script uses the local JDK, Maven, and Maven dependency cache from `tools/`.
 It does not change your Windows system environment.

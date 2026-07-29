@@ -77,6 +77,7 @@ public final class SwingGame {
     private final JLabel handLabel = label("Roll the dice to begin", 18, TEXT);
     private final JLabel selectionLabel = label("KEEP: none", 13, ACCENT);
     private final JPanel roundDicePanel = new JPanel();
+    private JPanel tablePanel;
     private final JTextArea activity = new JTextArea();
     private final JPanel scorePanel = new JPanel(new GridLayout(1, 2, 12, 0));
     private final JButton[] diceButtons = new JButton[3];
@@ -163,6 +164,7 @@ public final class SwingGame {
 
     private JPanel table() {
         JPanel panel = new WoodPanel(new GridBagLayout(), WOOD, WOOD_DARK);
+        tablePanel = panel;
         panel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(GOLD, 2),
@@ -200,8 +202,9 @@ public final class SwingGame {
 
         constraints.gridy++;
         roundDicePanel.setOpaque(false);
-        roundDicePanel.setLayout(new BoxLayout(roundDicePanel, BoxLayout.Y_AXIS));
+        roundDicePanel.setLayout(new GridLayout(2, 1, 0, 8));
         roundDicePanel.setVisible(false);
+        tablePanel.revalidate();
         panel.add(roundDicePanel, constraints);
 
         constraints.gridy++;
@@ -604,26 +607,33 @@ public final class SwingGame {
             for (Map.Entry<Player, Hand> entry : hands.entrySet()) {
                 Player player = entry.getKey();
                 boolean won = player == winner;
-                JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
-                row.setOpaque(false);
-                row.add(label(player.getName() + (won ? "  -  POINT WINNER" : ""), 14, won ? GOLD : TEXT));
-                int[] dice = lastDice.get(player);
-                if (dice != null) {
-                    for (int value : dice) {
+                JPanel row = new JPanel(new BorderLayout(8, 2));
+                row.setBackground(PARCHMENT);
+                row.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(won ? GOLD : PARCHMENT_SHADE, 2),
+                        BorderFactory.createEmptyBorder(6, 10, 6, 10)));
+                row.add(label(player.getName() + (won ? "  -  POINT WINNER" : ""), 13,
+                        won ? ACCENT_DARK : INK), BorderLayout.NORTH);
+                JPanel diceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 7, 0));
+                diceRow.setOpaque(false);
+                int[] values = lastDice.get(player);
+                if (values != null) {
+                    for (int value : values) {
                         DieButton die = new DieButton();
                         die.setValue(value);
                         die.setEnabled(false);
                         die.setBackground(won ? GOLD : PARCHMENT);
-                        die.setPreferredSize(new Dimension(48, 48));
-                        row.add(die);
+                        die.setPreferredSize(new Dimension(38, 38));
+                        diceRow.add(die);
                     }
                 }
-                row.add(label(entry.getValue().describe(), 13, won ? GOLD : MUTED));
+                diceRow.add(label(entry.getValue().describe(), 13, INK));
+                row.add(diceRow, BorderLayout.CENTER);
                 roundDicePanel.add(row);
             }
             roundDicePanel.setVisible(true);
-            roundDicePanel.revalidate();
-            roundDicePanel.repaint();
+            tablePanel.revalidate();
+            tablePanel.repaint();
         }
 
         private String diceText(int[] dice) {

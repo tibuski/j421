@@ -20,22 +20,7 @@ mvn -version
 
 If you see `'java' is not recognized` or `'mvn' is not recognized`, restart your terminal after installation, or add them to PATH manually.
 
-## Download & Play
-
-### Option 1 – No Git (download ZIP)
-
-1. Go to https://github.com/tibuski/j421
-2. Click the green **Code** button → **Download ZIP**
-3. Unzip the downloaded file
-4. Open **Command Prompt** or **PowerShell** in the `j421-master\game421` folder (hold Shift + right-click inside the folder → "Open in Terminal" / "Open command window here")
-5. Run:
-
-```cmd
-mvn clean package
-java -jar target\game421-1.0.0.jar
-```
-
-### Option 2 – With Git
+## Clone & Play
 
 ```cmd
 git clone https://github.com/tibuski/j421.git

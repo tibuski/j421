@@ -64,6 +64,7 @@ public final class SwingGame {
     private final JLabel hintLabel = label("", 13, MUTED);
     private final JLabel rollsLabel = label("", 13, MUTED);
     private final JLabel handLabel = label("Roll the dice to begin", 18, TEXT);
+    private final JLabel selectionLabel = label("KEEP: none", 13, ACCENT);
     private final JTextArea activity = new JTextArea();
     private final JPanel scorePanel = new JPanel(new GridLayout(1, 2, 12, 0));
     private final JButton[] diceButtons = new JButton[3];
@@ -181,6 +182,10 @@ public final class SwingGame {
         panel.add(handLabel, constraints);
 
         constraints.gridy++;
+        constraints.insets = new Insets(0, 0, 8, 0);
+        panel.add(selectionLabel, constraints);
+
+        constraints.gridy++;
         constraints.insets = new Insets(0, 0, 0, 0);
         panel.add(rollsLabel, constraints);
 
@@ -244,9 +249,11 @@ public final class SwingGame {
             return;
         }
         selected[position] = !selected[position];
-        diceButtons[position].setBackground(selected[position] ? ACCENT : SURFACE_LIGHT);
-        diceButtons[position].setForeground(selected[position] ? BACKGROUND : TEXT);
+        updateDieButton(position);
         rerollButton.setEnabled(hasDiceToReroll() && humanController.rollsRemaining() > 0);
+        String state = selected[position] ? "held" : "released";
+        append("Die " + (position + 1) + " (" + diceButtons[position].getText() + ") " + state + ". Keep: " + heldPositions());
+        System.out.println("[421] Die " + (position + 1) + " " + state + "; keep positions " + heldPositions());
     }
 
     private void submitReroll() {
@@ -259,6 +266,9 @@ public final class SwingGame {
                 positions.add(i);
             }
         }
+        append("Rerolling positions " + positions + "; keeping " + heldPositions() + ".");
+        System.out.println("[421] Rerolling positions " + positions + "; keeping " + heldPositions());
+        setControlsEnabled(false);
         humanController.submit(new TurnDecision.Reroll(positions));
     }
 
@@ -277,11 +287,11 @@ public final class SwingGame {
     private void showDice(TurnState state) {
         // A new roll starts a fresh selection; the previous choices no longer apply.
         selected = new boolean[3];
+        selectionLabel.setText("KEEP: none");
         int[] dice = state.dice();
         for (int i = 0; i < diceButtons.length; i++) {
             diceButtons[i].setText(Integer.toString(dice[i]));
-            diceButtons[i].setBackground(SURFACE_LIGHT);
-            diceButtons[i].setForeground(TEXT);
+            updateDieButton(i);
         }
         rollsLabel.setText("Roll " + state.rollsUsed() + " of 3  ·  " + state.rollsRemaining() + " remaining");
         if (humanTurn) {
@@ -296,6 +306,29 @@ public final class SwingGame {
         }
         rerollButton.setEnabled(false);
         standButton.setEnabled(enabled);
+    }
+
+    private void updateDieButton(int position) {
+        diceButtons[position].setText(selected[position]
+                ? "<html><center>HELD<br>" + diceButtons[position].getText() + "</center></html>"
+                : plainDieValue(diceButtons[position].getText()));
+        diceButtons[position].setBackground(selected[position] ? ACCENT : SURFACE_LIGHT);
+        diceButtons[position].setForeground(selected[position] ? BACKGROUND : TEXT);
+        selectionLabel.setText("KEEP: " + (heldPositions().isEmpty() ? "none" : heldPositions()));
+    }
+
+    private String plainDieValue(String text) {
+        return text.replaceAll("<[^>]*>", "").replace("HELD", "").trim();
+    }
+
+    private Set<Integer> heldPositions() {
+        Set<Integer> held = new HashSet<>();
+        for (int i = 0; i < selected.length; i++) {
+            if (selected[i]) {
+                held.add(i + 1);
+            }
+        }
+        return held;
     }
 
     private void playAgain() {

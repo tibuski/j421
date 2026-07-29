@@ -300,6 +300,8 @@ public final class SwingGame {
         }
         rollsLabel.setText("Roll " + state.rollsUsed() + " of 3  ·  " + state.rollsRemaining() + " remaining");
         if (humanTurn) {
+            // Reroll submission temporarily disables the controls while the worker updates the turn.
+            setControlsEnabled(true);
             rerollButton.setEnabled(state.rollsRemaining() > 0);
             standButton.setEnabled(true);
         }
@@ -396,7 +398,10 @@ public final class SwingGame {
         @Override
         public void turnStarted(Player player) {
             humanController.beginTurn();
-            SwingUtilities.invokeLater(() -> showTurn(player));
+            SwingUtilities.invokeLater(() -> {
+                showTurn(player);
+                append(player.getName() + "'s turn starts.");
+            });
         }
 
         @Override
@@ -414,7 +419,7 @@ public final class SwingGame {
 
         @Override
         public void turnEnded(Player player, Hand hand) {
-            SwingUtilities.invokeLater(() -> append(player.getName() + " rolled " + hand.describe() + "."));
+            SwingUtilities.invokeLater(() -> append(player.getName() + "'s turn ends with " + hand.describe() + "."));
         }
 
         @Override

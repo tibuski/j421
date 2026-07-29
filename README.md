@@ -4,34 +4,20 @@ Console implementation of the classic French dice game 421.
 
 ## Prerequisites
 
-You need three tools installed on your Windows computer:
+Git is the only tool that needs to be installed globally. Java and Maven are
+portable tools kept inside this development directory, so they do not need to
+be installed globally or added to the system PATH.
 
-1. **Git** – Download from https://git-scm.com/download/win
-   - Run the installer with default settings (keep "Git Bash" selected)
-2. **Java 21 or newer** – Download from https://adoptium.net/
-   - During install, check **"Add to PATH"**
-3. **Maven 3.9 or newer** – Download from https://maven.apache.org/download.cgi
-   - Unzip the `.zip` file to `C:\maven\` (or any folder)
-   - Add `C:\maven\bin` to your system PATH (see below)
+- **Git** – Download from https://git-scm.com/download/win on Windows. Use the
+  default installer options.
+- **Portable Java 21** – Place the JDK directory at
+  `tools\jdk-21.0.12+8` on Windows or `tools/jdk-21.0.12+8` on GNOME.
+- **Portable Maven 3.9.9** – Place Maven at
+  `tools\apache-maven-3.9.9` on Windows or `tools/apache-maven-3.9.9` on GNOME.
 
-### Check your installation
-
-Open **Command Prompt** (press `Win + R`, type `cmd`, press Enter) and run:
-
-```cmd
-git --version
-java -version
-mvn -version
-```
-
-If you see `'command' is not recognized`, the tool is not in your PATH.
-
-### Add Maven to PATH (if needed)
-
-1. Press `Win + S`, type **Environment Variables**, open **Edit the system environment variables**
-2. Click **Environment Variables** → under **System Variables**, find and select **Path** → **Edit**
-3. Click **New** and add the path to your Maven `bin` folder (e.g. `C:\maven\bin`)
-4. Click **OK** on all dialogs, then **restart Command Prompt**
+The `tools/` directory is intentionally ignored by Git because it contains
+large platform-specific binaries. Copy it from the development machine, or
+download and unpack matching portable JDK and Maven distributions there.
 
 ## Clone the project
 
@@ -48,21 +34,62 @@ cd %USERPROFILE%\Desktop
 git clone https://github.com/tibuski/j421.git
 ```
 
-4. Go into the project folder:
+4. Go into the repository folder:
 
 ```cmd
-cd j421\game421
+cd j421
 ```
 
-## Build & Run
+## Build & Run on Windows
+
+Double-click `run-game.cmd`, or open Command Prompt in the repository folder
+and run:
 
 ```cmd
-mvn clean package
-java -jar target\game421-1.0.0.jar
+run-game.cmd
 ```
 
-## Run without building the jar
+The JAR opens the graphical game table. The interface uses Java Swing, which is
+included with Java and works on Windows and Linux desktops such as GNOME.
+
+The script uses the local JDK, Maven, and Maven dependency cache from `tools/`.
+It does not change your Windows system environment.
+
+## Build & Run on GNOME
+
+Open **Terminal** in the repository folder, make the script executable once,
+then run it:
+
+```bash
+chmod +x run-game.sh
+./run-game.sh
+```
+
+The script uses the local tools and dependency cache from `tools/` and does not
+require a system-wide Java or Maven installation.
+
+### Play from the source code
+
+You can also launch the interface directly with the local tools.
 
 ```cmd
-mvn compile exec:java -Dexec.mainClass="com.game421.Main"
+tools\apache-maven-3.9.9\bin\mvn.cmd -f game421\pom.xml -Dmaven.repo.local=tools\m2-repo compile exec:java -Dexec.mainClass="com.game421.Main"
 ```
+
+The source is in `game421\src\main\java`. The main UI is in
+`game421\src\main\java\com\game421\ui\SwingGame.java`, so you can edit it and run the
+command again to see your changes.
+
+On GNOME, use the equivalent command with `/` path separators:
+
+```bash
+tools/apache-maven-3.9.9/bin/mvn -f game421/pom.xml -Dmaven.repo.local=tools/m2-repo compile exec:java -Dexec.mainClass="com.game421.Main"
+```
+
+## Console Mode
+
+```cmd
+tools\jdk-21.0.12+8\bin\java.exe -jar game421\target\game421-1.0.0.jar --console
+```
+
+`--console` starts the original terminal version instead of the graphical UI.

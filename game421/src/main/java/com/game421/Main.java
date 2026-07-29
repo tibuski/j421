@@ -8,6 +8,7 @@ import com.game421.player.Player;
 import com.game421.player.PlayerController;
 import com.game421.ui.ConsoleGameListener;
 import com.game421.ui.ConsolePlayerController;
+import com.game421.ui.SwingGame;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -52,6 +53,10 @@ public final class Main {
     }
 
     public static void main(String[] args) {
+        if (!java.util.Arrays.asList(args).contains("--console")) {
+            SwingGame.launch();
+            return;
+        }
         PrintStream out = System.out;
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));
 

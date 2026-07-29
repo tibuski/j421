@@ -67,7 +67,7 @@ public final class SwingGame {
     private final JTextArea activity = new JTextArea();
     private final JPanel scorePanel = new JPanel(new GridLayout(1, 2, 12, 0));
     private final JButton[] diceButtons = new JButton[3];
-    private final JButton rerollButton = button("REROLL SELECTED DICE", ACCENT_DARK, TEXT);
+    private final JButton rerollButton = button("REROLL OTHER DICE", ACCENT_DARK, TEXT);
     private final JButton standButton = button("STAND", GOLD, BACKGROUND);
     private final JButton playAgainButton = button("PLAY AGAIN", ACCENT, BACKGROUND);
     private final HumanController humanController = new HumanController();
@@ -246,31 +246,31 @@ public final class SwingGame {
         selected[position] = !selected[position];
         diceButtons[position].setBackground(selected[position] ? ACCENT : SURFACE_LIGHT);
         diceButtons[position].setForeground(selected[position] ? BACKGROUND : TEXT);
-        rerollButton.setEnabled(hasSelection() && humanController.rollsRemaining() > 0);
+        rerollButton.setEnabled(hasDiceToReroll() && humanController.rollsRemaining() > 0);
     }
 
     private void submitReroll() {
-        if (!hasSelection()) {
+        if (!hasDiceToReroll()) {
             return;
         }
         Set<Integer> positions = new HashSet<>();
         for (int i = 0; i < selected.length; i++) {
-            if (selected[i]) {
+            if (!selected[i]) {
                 positions.add(i);
             }
         }
         humanController.submit(new TurnDecision.Reroll(positions));
     }
 
-    private boolean hasSelection() {
-        return selected[0] || selected[1] || selected[2];
+    private boolean hasDiceToReroll() {
+        return !selected[0] || !selected[1] || !selected[2];
     }
 
     private void showTurn(Player player) {
         humanTurn = player == human;
         selected = new boolean[3];
         turnLabel.setText(player.getName() + " is rolling");
-        hintLabel.setText(humanTurn ? "Select dice to reroll, or stand with this hand." : "The computer is thinking...");
+        hintLabel.setText(humanTurn ? "Click dice to keep, then reroll the others." : "The computer is thinking...");
         setControlsEnabled(humanTurn);
     }
 
@@ -285,7 +285,7 @@ public final class SwingGame {
         }
         rollsLabel.setText("Roll " + state.rollsUsed() + " of 3  ·  " + state.rollsRemaining() + " remaining");
         if (humanTurn) {
-            rerollButton.setEnabled(false);
+            rerollButton.setEnabled(state.rollsRemaining() > 0);
             standButton.setEnabled(true);
         }
     }

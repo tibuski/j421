@@ -88,7 +88,9 @@ public final class SwingGame {
         this.human = new Player(playerOne);
         this.second = new Player(playerTwo);
         this.winningScore = winningScore;
-        this.secondController = computer ? new AiPlayerController() : humanController;
+        this.secondController = computer
+                ? new LoggingController(second.getName(), new AiPlayerController())
+                : humanController;
         buildWindow();
         refreshScores();
     }
@@ -427,6 +429,8 @@ public final class SwingGame {
         @Override
         public void diceRolled(Player player, TurnState state) {
             lastDice.put(player, state.dice());
+            System.out.println("[421] " + player.getName() + " dice " + diceText(state.dice())
+                    + "; roll " + state.rollsUsed() + "/3; remaining " + state.rollsRemaining());
             if (player != human) {
                 SwingUtilities.invokeLater(() -> append("Computer rolled its dice."));
                 return;
@@ -440,6 +444,8 @@ public final class SwingGame {
 
         @Override
         public void turnEnded(Player player, Hand hand) {
+            System.out.println("[421] " + player.getName() + " final dice " + diceText(lastDice.get(player))
+                    + "; hand " + hand.describe());
             SwingUtilities.invokeLater(() -> append(player.getName() + "'s turn ends with " + hand.describe() + "."));
         }
 
@@ -451,6 +457,11 @@ public final class SwingGame {
         @Override
         public void roundWon(int number, Player winner, Map<Player, Hand> hands) {
             roundGate = new CountDownLatch(1);
+            System.out.println("[421] Point result: " + hands.entrySet().stream()
+                    .map(entry -> entry.getKey().getName() + " " + diceText(lastDice.get(entry.getKey()))
+                            + " = " + entry.getValue().describe())
+                    .toList());
+            System.out.println("[421] Point winner: " + winner.getName());
             SwingUtilities.invokeLater(() -> {
                 humanTurn = false;
                 setControlsEnabled(false);
@@ -537,12 +548,49 @@ public final class SwingGame {
         @Override
         public TurnDecision decide(TurnState state) {
             try {
-                latch.await();
-                return decision == null ? new TurnDecision.Stand() : decision;
+                CountDownLatch currentLatch = latch;
+                currentLatch.await();
+                TurnDecision result = decision == null ? new TurnDecision.Stand() : decision;
+                decision = null;
+                latch = new CountDownLatch(1);
+                return result;
             } catch (InterruptedException interrupted) {
                 Thread.currentThread().interrupt();
                 return new TurnDecision.Stand();
             }
+        }
+    }
+
+    private static final class LoggingController implements PlayerController {
+        private final String playerName;
+        private final PlayerController delegate;
+
+        private LoggingController(String playerName, PlayerController delegate) {
+            this.playerName = playerName;
+            this.delegate = delegate;
+        }
+
+        @Override
+        public TurnDecision decide(TurnState state) {
+            TurnDecision decision = delegate.decide(state);
+            switch (decision) {
+                case TurnDecision.Stand ignored -> System.out.println("[421] " + playerName + " keeps all dice and stands.");
+                case TurnDecision.Reroll reroll -> {
+                    Set<Integer> kept = new HashSet<>();
+                    for (int i = 0; i < state.dice().length; i++) {
+                        if (!reroll.positions().contains(i)) {
+                            kept.add(i + 1);
+                        }
+                    }
+                    System.out.println("[421] " + playerName + " keeps positions " + kept
+                            + " and rerolls positions " + positionsForLog(reroll.positions()) + ".");
+                }
+            }
+            return decision;
+        }
+
+        private Set<Integer> positionsForLog(Set<Integer> positions) {
+            return positions.stream().map(position -> position + 1).collect(java.util.stream.Collectors.toSet());
         }
     }
 

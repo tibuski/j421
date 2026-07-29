@@ -29,6 +29,7 @@ import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -75,6 +76,7 @@ public final class SwingGame {
     private final JLabel rollsLabel = label("", 18, ACCENT);
     private final JLabel handLabel = label("Roll the dice to begin", 18, TEXT);
     private final JLabel selectionLabel = label("KEEP: none", 13, ACCENT);
+    private final JPanel roundDicePanel = new JPanel();
     private final JTextArea activity = new JTextArea();
     private final JPanel scorePanel = new JPanel(new GridLayout(1, 2, 12, 0));
     private final JButton[] diceButtons = new JButton[3];
@@ -183,12 +185,8 @@ public final class SwingGame {
         dice.setOpaque(false);
         for (int i = 0; i < diceButtons.length; i++) {
             int position = i;
-            diceButtons[i] = button("-", PARCHMENT, INK);
+            diceButtons[i] = new DieButton();
             diceButtons[i].setPreferredSize(new Dimension(125, 125));
-            diceButtons[i].setFont(new Font(Font.SERIF, Font.BOLD, 56));
-            diceButtons[i].setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(91, 53, 24), 3),
-                    BorderFactory.createEmptyBorder(8, 8, 8, 8)));
             diceButtons[i].addActionListener(event -> toggleDie(position));
             dice.add(diceButtons[i]);
         }
@@ -199,6 +197,12 @@ public final class SwingGame {
         constraints.gridy++;
         constraints.insets = new Insets(0, 0, 8, 0);
         panel.add(handLabel, constraints);
+
+        constraints.gridy++;
+        roundDicePanel.setOpaque(false);
+        roundDicePanel.setLayout(new BoxLayout(roundDicePanel, BoxLayout.Y_AXIS));
+        roundDicePanel.setVisible(false);
+        panel.add(roundDicePanel, constraints);
 
         constraints.gridy++;
         constraints.insets = new Insets(0, 0, 8, 0);
@@ -275,7 +279,7 @@ public final class SwingGame {
         updateDieButton(position);
         rerollButton.setEnabled(hasDiceToReroll() && humanController.rollsRemaining() > 0);
         String state = selected[position] ? "held" : "released";
-        append("Die " + (position + 1) + " (" + diceButtons[position].getText() + ") " + state + ". Keep: " + heldPositions());
+        append("Die " + (position + 1) + " (" + dieValue(position) + ") " + state + ". Keep: " + heldPositions());
         System.out.println("[421] Die " + (position + 1) + " " + state + "; keep positions " + heldPositions());
     }
 
@@ -316,9 +320,10 @@ public final class SwingGame {
         // A new roll starts a fresh selection; the previous choices no longer apply.
         selected = new boolean[3];
         selectionLabel.setText("KEEP: none");
+        roundDicePanel.setVisible(false);
         int[] dice = state.dice();
         for (int i = 0; i < diceButtons.length; i++) {
-            diceButtons[i].setText(Integer.toString(dice[i]));
+            ((DieButton) diceButtons[i]).setValue(dice[i]);
             updateDieButton(i);
         }
         rollsLabel.setText("ROLL " + state.rollsUsed() + " / 3  ·  " + state.rollsRemaining() + " REMAINING");
@@ -339,14 +344,13 @@ public final class SwingGame {
     }
 
     private void updateDieButton(int position) {
-        diceButtons[position].setText(plainDieValue(diceButtons[position].getText()));
         diceButtons[position].setBackground(selected[position] ? GOLD : PARCHMENT);
         diceButtons[position].setForeground(INK);
         selectionLabel.setText("KEEP: " + (heldPositions().isEmpty() ? "none" : heldPositions()));
     }
 
-    private String plainDieValue(String text) {
-        return text.replaceAll("<[^>]*>", "").replace("HELD", "").trim();
+    private int dieValue(int position) {
+        return ((DieButton) diceButtons[position]).value();
     }
 
     private Set<Integer> heldPositions() {
@@ -449,6 +453,64 @@ public final class SwingGame {
         }
     }
 
+    private static final class DieButton extends JButton {
+        private int value;
+
+        private DieButton() {
+            setBackground(PARCHMENT);
+            setForeground(INK);
+            setFocusPainted(false);
+            setBorder(BorderFactory.createEmptyBorder());
+            setContentAreaFilled(false);
+        }
+
+        void setValue(int value) {
+            this.value = value;
+            repaint();
+        }
+
+        int value() {
+            return value;
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            Graphics2D g = (Graphics2D) graphics.create();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int inset = 4;
+            int width = getWidth() - inset * 2;
+            int height = getHeight() - inset * 2;
+            g.setColor(getBackground());
+            g.fillRoundRect(inset, inset, width, height, 18, 18);
+            g.setColor(new Color(78, 42, 21));
+            g.setStroke(new BasicStroke(3));
+            g.drawRoundRect(inset, inset, width, height, 18, 18);
+
+            int pip = Math.max(5, Math.min(width, height) / 9);
+            int left = inset + width / 4;
+            int centerX = inset + width / 2;
+            int right = inset + width * 3 / 4;
+            int top = inset + height / 4;
+            int centerY = inset + height / 2;
+            int bottom = inset + height * 3 / 4;
+            g.setColor(INK);
+            switch (value) {
+                case 1 -> pip(g, centerX, centerY, pip);
+                case 2 -> { pip(g, left, top, pip); pip(g, right, bottom, pip); }
+                case 3 -> { pip(g, left, top, pip); pip(g, centerX, centerY, pip); pip(g, right, bottom, pip); }
+                case 4 -> { pip(g, left, top, pip); pip(g, right, top, pip); pip(g, left, bottom, pip); pip(g, right, bottom, pip); }
+                case 5 -> { pip(g, left, top, pip); pip(g, right, top, pip); pip(g, centerX, centerY, pip); pip(g, left, bottom, pip); pip(g, right, bottom, pip); }
+                case 6 -> { pip(g, left, top, pip); pip(g, right, top, pip); pip(g, left, centerY, pip); pip(g, right, centerY, pip); pip(g, left, bottom, pip); pip(g, right, bottom, pip); }
+                default -> { }
+            }
+            g.dispose();
+        }
+
+        private void pip(Graphics2D g, int x, int y, int size) {
+            g.fillOval(x - size / 2, y - size / 2, size, size);
+        }
+    }
+
     private final class Listener implements GameListener {
         @Override
         public void roundStarted(int number) {
@@ -511,7 +573,8 @@ public final class SwingGame {
                 refreshScores();
                 turnLabel.setText(winner.getName() + " wins the point!");
                 hintLabel.setText("Final hands");
-                handLabel.setText(roundHands(hands, winner));
+                handLabel.setText("Hands on the table");
+                showRoundDice(hands, winner);
                 rollsLabel.setText("POINT AWARDED");
                 append(winner.getName() + " wins round " + number + " and scores a point.");
                 nextRoundButton.setText(winner.getScore() >= winningScore ? "SHOW FINAL RESULT" : "NEXT ROUND");
@@ -534,6 +597,33 @@ public final class SwingGame {
                         .append("</font><br>");
             }
             return result.append("</html>").toString();
+        }
+
+        private void showRoundDice(Map<Player, Hand> hands, Player winner) {
+            roundDicePanel.removeAll();
+            for (Map.Entry<Player, Hand> entry : hands.entrySet()) {
+                Player player = entry.getKey();
+                boolean won = player == winner;
+                JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 2));
+                row.setOpaque(false);
+                row.add(label(player.getName() + (won ? "  -  POINT WINNER" : ""), 14, won ? GOLD : TEXT));
+                int[] dice = lastDice.get(player);
+                if (dice != null) {
+                    for (int value : dice) {
+                        DieButton die = new DieButton();
+                        die.setValue(value);
+                        die.setEnabled(false);
+                        die.setBackground(won ? GOLD : PARCHMENT);
+                        die.setPreferredSize(new Dimension(48, 48));
+                        row.add(die);
+                    }
+                }
+                row.add(label(entry.getValue().describe(), 13, won ? GOLD : MUTED));
+                roundDicePanel.add(row);
+            }
+            roundDicePanel.setVisible(true);
+            roundDicePanel.revalidate();
+            roundDicePanel.repaint();
         }
 
         private String diceText(int[] dice) {

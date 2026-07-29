@@ -62,7 +62,7 @@ public final class SwingGame {
     private final JLabel roundLabel = label("ROUND 1", 12, ACCENT);
     private final JLabel turnLabel = label("Preparing table...", 23, TEXT);
     private final JLabel hintLabel = label("", 13, MUTED);
-    private final JLabel rollsLabel = label("", 13, MUTED);
+    private final JLabel rollsLabel = label("", 18, ACCENT);
     private final JLabel handLabel = label("Roll the dice to begin", 18, TEXT);
     private final JLabel selectionLabel = label("KEEP: none", 13, ACCENT);
     private final JTextArea activity = new JTextArea();
@@ -70,6 +70,7 @@ public final class SwingGame {
     private final JButton[] diceButtons = new JButton[3];
     private final JButton rerollButton = button("REROLL OTHER DICE", ACCENT_DARK, TEXT);
     private final JButton standButton = button("STAND", GOLD, BACKGROUND);
+    private final JButton nextRoundButton = button("NEXT ROUND", ACCENT, BACKGROUND);
     private final JButton playAgainButton = button("PLAY AGAIN", ACCENT, BACKGROUND);
     private final HumanController humanController = new HumanController();
     private final PlayerController secondController;
@@ -80,6 +81,7 @@ public final class SwingGame {
     private boolean[] selected = new boolean[3];
     private boolean humanTurn;
     private int roundNumber = 1;
+    private volatile CountDownLatch roundGate = new CountDownLatch(0);
 
     private SwingGame(String playerOne, String playerTwo, boolean computer, int winningScore) {
         this.human = new Player(playerOne);
@@ -124,6 +126,7 @@ public final class SwingGame {
             @Override
             public void windowClosed(WindowEvent event) {
                 humanController.cancel();
+                roundGate.countDown();
             }
         });
     }
@@ -193,10 +196,13 @@ public final class SwingGame {
         actions.setOpaque(false);
         rerollButton.addActionListener(event -> submitReroll());
         standButton.addActionListener(event -> humanController.submit(new TurnDecision.Stand()));
+        nextRoundButton.addActionListener(event -> continueToNextRound());
         playAgainButton.addActionListener(event -> playAgain());
+        nextRoundButton.setVisible(false);
         playAgainButton.setVisible(false);
         actions.add(rerollButton);
         actions.add(standButton);
+        actions.add(nextRoundButton);
         actions.add(playAgainButton);
         constraints.gridy++;
         constraints.insets = new Insets(24, 0, 0, 0);
@@ -298,7 +304,7 @@ public final class SwingGame {
             diceButtons[i].setText(Integer.toString(dice[i]));
             updateDieButton(i);
         }
-        rollsLabel.setText("Roll " + state.rollsUsed() + " of 3  ·  " + state.rollsRemaining() + " remaining");
+        rollsLabel.setText("ROLL " + state.rollsUsed() + " / 3  ·  " + state.rollsRemaining() + " REMAINING");
         if (humanTurn) {
             // Reroll submission temporarily disables the controls while the worker updates the turn.
             setControlsEnabled(true);
@@ -316,9 +322,7 @@ public final class SwingGame {
     }
 
     private void updateDieButton(int position) {
-        diceButtons[position].setText(selected[position]
-                ? "<html><center>HELD<br>" + diceButtons[position].getText() + "</center></html>"
-                : plainDieValue(diceButtons[position].getText()));
+        diceButtons[position].setText(plainDieValue(diceButtons[position].getText()));
         diceButtons[position].setBackground(selected[position] ? ACCENT : SURFACE_LIGHT);
         diceButtons[position].setForeground(selected[position] ? BACKGROUND : TEXT);
         selectionLabel.setText("KEEP: " + (heldPositions().isEmpty() ? "none" : heldPositions()));
@@ -340,8 +344,22 @@ public final class SwingGame {
 
     private void playAgain() {
         humanController.cancel();
+        roundGate.countDown();
         frame.dispose();
         launch();
+    }
+
+    private void continueToNextRound() {
+        nextRoundButton.setVisible(false);
+        roundGate.countDown();
+    }
+
+    private void waitForNextRound() {
+        try {
+            roundGate.await();
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     private void refreshScores() {
@@ -429,10 +447,19 @@ public final class SwingGame {
 
         @Override
         public void roundWon(int number, Player winner, Map<Player, Hand> hands) {
+            roundGate = new CountDownLatch(1);
             SwingUtilities.invokeLater(() -> {
+                humanTurn = false;
+                setControlsEnabled(false);
                 refreshScores();
+                turnLabel.setText(winner.getName() + " wins the point!");
+                hintLabel.setText(hands.get(winner).describe());
+                rollsLabel.setText("POINT AWARDED");
                 append(winner.getName() + " wins round " + number + " and scores a point.");
+                nextRoundButton.setText(winner.getScore() >= winningScore ? "SHOW FINAL RESULT" : "NEXT ROUND");
+                nextRoundButton.setVisible(true);
             });
+            waitForNextRound();
         }
 
         @Override

@@ -281,6 +281,11 @@ public final class SwingGame {
         selected = new boolean[3];
         turnLabel.setText(player.getName() + " is rolling");
         hintLabel.setText(humanTurn ? "Click dice to keep, then reroll the others." : "The computer is thinking...");
+        if (!humanTurn) {
+            handLabel.setText("Computer's dice are hidden");
+            selectionLabel.setText("KEEP: --");
+            rollsLabel.setText("");
+        }
         setControlsEnabled(humanTurn);
     }
 
@@ -396,6 +401,10 @@ public final class SwingGame {
 
         @Override
         public void diceRolled(Player player, TurnState state) {
+            if (player != human) {
+                SwingUtilities.invokeLater(() -> append("Computer rolled its dice."));
+                return;
+            }
             humanController.updateRolls(state.rollsRemaining());
             SwingUtilities.invokeLater(() -> {
                 showDice(state);

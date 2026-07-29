@@ -77,6 +77,7 @@ public final class SwingGame {
     private final Player human;
     private final Player second;
     private final int winningScore;
+    private final Map<Player, int[]> lastDice = new LinkedHashMap<>();
 
     private boolean[] selected = new boolean[3];
     private boolean humanTurn;
@@ -406,6 +407,7 @@ public final class SwingGame {
     private final class Listener implements GameListener {
         @Override
         public void roundStarted(int number) {
+            lastDice.clear();
             SwingUtilities.invokeLater(() -> {
                 roundNumber = number;
                 roundLabel.setText("ROUND " + number);
@@ -424,6 +426,7 @@ public final class SwingGame {
 
         @Override
         public void diceRolled(Player player, TurnState state) {
+            lastDice.put(player, state.dice());
             if (player != human) {
                 SwingUtilities.invokeLater(() -> append("Computer rolled its dice."));
                 return;
@@ -453,13 +456,38 @@ public final class SwingGame {
                 setControlsEnabled(false);
                 refreshScores();
                 turnLabel.setText(winner.getName() + " wins the point!");
-                hintLabel.setText(hands.get(winner).describe());
+                hintLabel.setText("Final hands");
+                handLabel.setText(roundHands(hands, winner));
                 rollsLabel.setText("POINT AWARDED");
                 append(winner.getName() + " wins round " + number + " and scores a point.");
                 nextRoundButton.setText(winner.getScore() >= winningScore ? "SHOW FINAL RESULT" : "NEXT ROUND");
                 nextRoundButton.setVisible(true);
             });
             waitForNextRound();
+        }
+
+        private String roundHands(Map<Player, Hand> hands, Player winner) {
+            StringBuilder result = new StringBuilder("<html>");
+            for (Map.Entry<Player, Hand> entry : hands.entrySet()) {
+                Player player = entry.getKey();
+                String marker = player == winner ? "  * WINNER" : "";
+                String color = player == winner ? "#3dd3b1" : "#eaf1f7";
+                result.append("<font color='").append(color).append("'><b>")
+                        .append(escapeHtml(player.getName())).append(marker)
+                        .append("</b>  ")
+                        .append(diceText(lastDice.get(player)))
+                        .append("  -  ").append(escapeHtml(entry.getValue().describe()))
+                        .append("</font><br>");
+            }
+            return result.append("</html>").toString();
+        }
+
+        private String diceText(int[] dice) {
+            return dice == null ? "[? ? ?]" : "[" + dice[0] + "  " + dice[1] + "  " + dice[2] + "]";
+        }
+
+        private String escapeHtml(String text) {
+            return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
         }
 
         @Override

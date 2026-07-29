@@ -67,8 +67,9 @@ public final class SwingGame {
     private final JTextArea activity = new JTextArea();
     private final JPanel scorePanel = new JPanel(new GridLayout(1, 2, 12, 0));
     private final JButton[] diceButtons = new JButton[3];
-    private final JButton rerollButton = button("REROLL SELECTED", ACCENT_DARK, TEXT);
+    private final JButton rerollButton = button("REROLL SELECTED DICE", ACCENT_DARK, TEXT);
     private final JButton standButton = button("STAND", GOLD, BACKGROUND);
+    private final JButton playAgainButton = button("PLAY AGAIN", ACCENT, BACKGROUND);
     private final HumanController humanController = new HumanController();
     private final PlayerController secondController;
     private final Player human;
@@ -187,8 +188,11 @@ public final class SwingGame {
         actions.setOpaque(false);
         rerollButton.addActionListener(event -> submitReroll());
         standButton.addActionListener(event -> humanController.submit(new TurnDecision.Stand()));
+        playAgainButton.addActionListener(event -> playAgain());
+        playAgainButton.setVisible(false);
         actions.add(rerollButton);
         actions.add(standButton);
+        actions.add(playAgainButton);
         constraints.gridy++;
         constraints.insets = new Insets(24, 0, 0, 0);
         panel.add(actions, constraints);
@@ -271,6 +275,8 @@ public final class SwingGame {
     }
 
     private void showDice(TurnState state) {
+        // A new roll starts a fresh selection; the previous choices no longer apply.
+        selected = new boolean[3];
         int[] dice = state.dice();
         for (int i = 0; i < diceButtons.length; i++) {
             diceButtons[i].setText(Integer.toString(dice[i]));
@@ -290,6 +296,12 @@ public final class SwingGame {
         }
         rerollButton.setEnabled(false);
         standButton.setEnabled(enabled);
+    }
+
+    private void playAgain() {
+        humanController.cancel();
+        frame.dispose();
+        launch();
     }
 
     private void refreshScores() {
@@ -381,6 +393,7 @@ public final class SwingGame {
             SwingUtilities.invokeLater(() -> {
                 humanTurn = false;
                 setControlsEnabled(false);
+                playAgainButton.setVisible(true);
                 turnLabel.setText(champion.getName() + " wins the match!");
                 hintLabel.setText("Final score: " + human.getScore() + " - " + second.getScore());
                 append("Match complete. Congratulations, " + champion.getName() + "!");

@@ -514,6 +514,79 @@ public final class SwingGame {
         }
     }
 
+    private void showRoundResultDialog(Map<Player, Hand> hands, Player winner) {
+        JDialog dialog = new JDialog(frame, "Round " + roundNumber + " result", true);
+        dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent event) {
+                roundGate.countDown();
+            }
+        });
+
+        JPanel root = new WoodPanel(new BorderLayout(0, 18), WOOD_DARK, BACKGROUND);
+        root.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(GOLD, 2), BorderFactory.createEmptyBorder(24, 28, 24, 28)));
+        JPanel heading = new JPanel();
+        heading.setOpaque(false);
+        heading.setLayout(new BoxLayout(heading, BoxLayout.Y_AXIS));
+        JLabel title = label(winner.getName() + " wins the point", 28, TEXT);
+        title.setAlignmentX(0);
+        JLabel subtitle = label("HANDS ON THE TABLE", 12, ACCENT);
+        subtitle.setAlignmentX(0);
+        heading.add(title);
+        heading.add(Box.createVerticalStrut(4));
+        heading.add(subtitle);
+        root.add(heading, BorderLayout.NORTH);
+
+        JPanel handsPanel = new JPanel(new GridLayout(2, 1, 0, 12));
+        handsPanel.setOpaque(false);
+        for (Map.Entry<Player, Hand> entry : hands.entrySet()) {
+            handsPanel.add(resultCard(entry.getKey(), entry.getValue(), entry.getKey() == winner));
+        }
+        root.add(handsPanel, BorderLayout.CENTER);
+
+        JButton continueButton = button(winner.getScore() >= winningScore ? "SHOW FINAL RESULT" : "NEXT ROUND", GOLD, INK);
+        continueButton.addActionListener(event -> {
+            dialog.dispose();
+        });
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        actions.setOpaque(false);
+        actions.add(continueButton);
+        root.add(actions, BorderLayout.SOUTH);
+
+        dialog.setContentPane(root);
+        dialog.setSize(620, 410);
+        dialog.setResizable(false);
+        dialog.setLocationRelativeTo(frame);
+        dialog.setVisible(true);
+    }
+
+    private JPanel resultCard(Player player, Hand hand, boolean winner) {
+        JPanel card = new JPanel(new BorderLayout(12, 6));
+        card.setBackground(PARCHMENT);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(winner ? GOLD : PARCHMENT_SHADE, 3),
+                BorderFactory.createEmptyBorder(12, 16, 12, 16)));
+        card.add(label(player.getName() + (winner ? "  -  POINT WINNER" : ""), 15, winner ? ACCENT_DARK : INK), BorderLayout.NORTH);
+        JPanel diceRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+        diceRow.setOpaque(false);
+        int[] values = lastDice.get(player);
+        if (values != null) {
+            for (int value : values) {
+                DieButton die = new DieButton();
+                die.setValue(value);
+                die.setEnabled(false);
+                die.setBackground(winner ? GOLD : PARCHMENT);
+                die.setPreferredSize(new Dimension(56, 56));
+                diceRow.add(die);
+            }
+        }
+        diceRow.add(label(hand.describe(), 15, INK));
+        card.add(diceRow, BorderLayout.CENTER);
+        return card;
+    }
+
     private final class Listener implements GameListener {
         @Override
         public void roundStarted(int number) {
@@ -575,13 +648,11 @@ public final class SwingGame {
                 setControlsEnabled(false);
                 refreshScores();
                 turnLabel.setText(winner.getName() + " wins the point!");
-                hintLabel.setText("Final hands");
-                handLabel.setText("Hands on the table");
-                showRoundDice(hands, winner);
+                hintLabel.setText("Reviewing the hands on the table...");
+                handLabel.setText("Point awarded");
                 rollsLabel.setText("POINT AWARDED");
                 append(winner.getName() + " wins round " + number + " and scores a point.");
-                nextRoundButton.setText(winner.getScore() >= winningScore ? "SHOW FINAL RESULT" : "NEXT ROUND");
-                nextRoundButton.setVisible(true);
+                showRoundResultDialog(hands, winner);
             });
             waitForNextRound();
         }
@@ -741,13 +812,79 @@ public final class SwingGame {
         static Setup show() {
             JTextField name = new JTextField("Player 1");
             JSpinner score = new JSpinner(new SpinnerNumberModel(GameConfig.DEFAULT_WINNING_SCORE, 1, 99, 1));
-            Object[] fields = {"Your name:", name, "Points to win:", score};
-            int result = JOptionPane.showConfirmDialog(null, fields, "Set up your match", JOptionPane.OK_CANCEL_OPTION);
-            if (result != JOptionPane.OK_OPTION) {
+            name.setFont(BODY_FONT.deriveFont(16f));
+            name.setForeground(INK);
+            name.setBackground(PARCHMENT);
+            score.setFont(BODY_FONT.deriveFont(16f));
+            score.setForeground(INK);
+            score.setBackground(PARCHMENT);
+
+            JDialog dialog = new JDialog((JFrame) null, "A table at the Gilded Dragon", true);
+            dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+            JPanel root = new WoodPanel(new BorderLayout(0, 18), WOOD_DARK, BACKGROUND);
+            root.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(GOLD, 2), BorderFactory.createEmptyBorder(24, 28, 24, 28)));
+            JPanel heading = new JPanel();
+            heading.setOpaque(false);
+            heading.setLayout(new BoxLayout(heading, BoxLayout.Y_AXIS));
+            JLabel title = label("A Table at the Gilded Dragon", 26, TEXT);
+            title.setAlignmentX(0);
+            JLabel subtitle = label("NAME YOUR ADVENTURER AND SET THE STAKES", 11, ACCENT);
+            subtitle.setAlignmentX(0);
+            heading.add(title);
+            heading.add(Box.createVerticalStrut(4));
+            heading.add(subtitle);
+            root.add(heading, BorderLayout.NORTH);
+
+            JPanel form = new JPanel(new GridBagLayout());
+            form.setBackground(PARCHMENT);
+            form.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(PARCHMENT_SHADE, 2), BorderFactory.createEmptyBorder(18, 20, 18, 20)));
+            GridBagConstraints constraints = new GridBagConstraints();
+            constraints.gridx = 0;
+            constraints.gridy = 0;
+            constraints.anchor = GridBagConstraints.WEST;
+            constraints.insets = new Insets(0, 0, 8, 12);
+            form.add(label("Adventurer name", 14, INK), constraints);
+            constraints.gridx = 1;
+            constraints.weightx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            form.add(name, constraints);
+            constraints.gridx = 0;
+            constraints.gridy++;
+            constraints.weightx = 0;
+            constraints.fill = GridBagConstraints.NONE;
+            constraints.insets = new Insets(8, 0, 0, 12);
+            form.add(label("Points to claim victory", 14, INK), constraints);
+            constraints.gridx = 1;
+            constraints.fill = GridBagConstraints.HORIZONTAL;
+            form.add(score, constraints);
+            root.add(form, BorderLayout.CENTER);
+
+            final Setup[] selection = new Setup[1];
+            JButton begin = button("TAKE YOUR SEAT", GOLD, INK);
+            begin.addActionListener(event -> {
+                String playerName = name.getText().isBlank() ? "Player 1" : name.getText().trim();
+                selection[0] = new Setup(playerName, "Computer", true, (Integer) score.getValue());
+                dialog.dispose();
+            });
+            JButton leave = button("LEAVE THE INN", WOOD, TEXT);
+            leave.addActionListener(event -> dialog.dispose());
+            JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+            actions.setOpaque(false);
+            actions.add(leave);
+            actions.add(begin);
+            root.add(actions, BorderLayout.SOUTH);
+
+            dialog.setContentPane(root);
+            dialog.setSize(540, 360);
+            dialog.setResizable(false);
+            dialog.setLocationByPlatform(true);
+            dialog.setVisible(true);
+            if (selection[0] == null) {
                 return null;
             }
-            String playerName = name.getText().isBlank() ? "Player 1" : name.getText().trim();
-            return new Setup(playerName, "Computer", true, (Integer) score.getValue());
+            return selection[0];
         }
     }
 }
